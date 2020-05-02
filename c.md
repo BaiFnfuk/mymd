@@ -117,3 +117,19 @@ int (*p3)[6]; // 二维数组指针
 int (*p4)(int, int); // 函数指针
 ```
 
+### 结构体
+
+```c
+// 定义一个结构体
+struct stu {
+  	char *name;
+    int num;
+    int age;
+    char group;
+    float score;
+}; // 注意最后的分号不能少
+// stu是我们定义的结构体名
+
+// 定义结构体变量
+struct stu stu1, stu2;
+```
