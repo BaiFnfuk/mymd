@@ -57,6 +57,9 @@ mysql -u root -p
 # 输入刚刚的临时密码（不包含开头的空格）
 
 # 修改密码
+set global validate_password.length=6;
+set global validate_password.policy=0;
+set global validate_password.check_user_name=off;
 ALTER USER 'root'@'localhost' IDENTIFIED BY '123456';
 
 # 退出
