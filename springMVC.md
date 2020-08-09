@@ -339,3 +339,142 @@ public class JsonController {
 </mvc:annotation-driven>
 ```
 
+### 7. 拦截器
+
+过滤器与拦截器的区别：拦截器是AOP思想的具体应用
+
+过滤器：servlet规范中的一部分，任何java web工程都可以使用，在url-pattern中配置了/*之后可以对所有要访问的资源进行拦截
+
+拦截器：
+
+- 拦截器是SpringMVC框架自己的，只有使用SPringMVC框架的工程才能使用
+- 拦截器只会拦截访问的控制器（controller）方法，如果访问的是jsp/html/css/image/js是不会拦截的
+
+#### 7.1 自定义拦截器
+
+实现HandlerInterceptor接口,主要是实现preHandle方法
+
+```java
+public class MyInterceptor implements HandlerInterceptor {
+
+    // return true;执行下一个拦截器，return false: 拦截
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("============处理前==========");
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        System.out.println("===========处理后============");
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        System.out.println("============清理==============");
+    }
+}
+```
+
+```xml
+<mvc:interceptors>
+    <mvc:interceptor>
+        <!-- /**包括这个请求下面的所有的请求 -->
+        <mvc:mapping path="/**"/>
+        <bean class="com.bai.config.MyInterceptor"/>
+    </mvc:interceptor>
+</mvc:interceptors>
+```
+
+### 8. 文件上传下载
+
+导包:
+
+```xml
+<dependency>
+    <groupId>commons-fileupload</groupId>
+    <artifactId>commons-fileupload</artifactId>
+    <version>1.4</version>
+</dependency>
+
+<dependency>
+    <groupId>commons-io</groupId>
+    <artifactId>commons-io</artifactId>
+    <version>2.6</version>
+</dependency>
+```
+
+文件上传：
+
+```xml
+<!-- 文件上传配置   -->
+<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+    <!-- 请求的编码格式，必须和jsp的pageEncoding一致，以便正确读取表单内容，默认为ISO-8859-1 -->
+    <property name="defaultEncoding" value="utf-8"/>
+    <!--  上传文件大小上限，单位为字节（10485760=10M）-->
+    <property name="maxUploadSize" value="10485760"/>
+    <property name="maxInMemorySize" value="40960"/>
+</bean>
+```
+
+```java
+ @RequestMapping("/upload")
+    public String uploadFile(@RequestParam("file") CommonsMultipartFile file, HttpServletRequest request) throws IOException {
+        // 上传路径保存设置
+        String path = request.getSession().getServletContext().getRealPath("/upload");
+        System.out.println(path);
+        File realPath = new File(path);
+        if (!realPath.exists()){
+            realPath.mkdir();
+        }
+        // 上传文件地址
+        System.out.println("上传文件保存地址");
+        // 通过CommonsMultipartFile的方法直接写文件
+        file.transferTo(new File(realPath + "/" + file.getOriginalFilename()));
+        return "redirect:/index.jsp";
+    }
+```
+
+```jsp
+<form action="${pageContext.request.contextPath}/upload" method="post" enctype="multipart/form-data">
+  选择文件 :<input type="file" name="file"><br>
+  <input type="submit" value="提交">
+</form>
+```
+
+文件下载：
+
+```java
+@RequestMapping("/download")
+public String downloadFile(HttpServletRequest request, HttpServletResponse response) throws IOException {
+    // 要下载的文件地址
+    String path = request.getSession().getServletContext().getRealPath("/upload");
+    String fileName = "1.jpg";
+
+    // 1. 设置response响应头
+    response.reset(); //设置页面不缓存，清空buffer
+    response.setCharacterEncoding("utf-8");
+    response.setContentType("multipart/form-data"); // 二进制传输数据
+    // 设置响应头
+    response.setHeader("Content-Disposition", "attachment;fileName="
+            + URLEncoder.encode(fileName,"UTF-8"));
+
+    File file = new File(path,fileName);
+
+    // 2. 读取文件--输入流
+    InputStream inputStream = new FileInputStream(file);
+    // 3. 写出文件--输出流
+    OutputStream outputStream = response.getOutputStream();
+
+    byte[] buffer = new byte[1024];
+    int index=0;
+    // 4.执行写出操作
+    while ((index = inputStream.read(buffer)) != -1){
+        outputStream.write(buffer, 0, index);
+        outputStream.flush();
+    }
+    outputStream.close();
+    inputStream.close();
+    return null;
+}
+```
